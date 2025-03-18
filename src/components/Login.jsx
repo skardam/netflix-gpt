@@ -1,8 +1,54 @@
-import React, { useState } from "react";
+import React, { useRef, useState } from "react";
 import Header from "./Header";
-
+import { validateData } from "../utils/Validate";
+import { auth } from "../utils/firebase";
+import {
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
+} from "firebase/auth";
 const Login = () => {
   const [isSignIn, setIsSignIn] = useState(true);
+  const [errorMessage, setErrorMessage] = useState(null);
+  const name = useRef(null);
+  const email = useRef(null);
+  const password = useRef(null);
+
+  const handleSignIn = () => {
+    const message = validateData(email.current.value, password.current.value);
+    if (!isSignIn) {
+      //Sign up logic
+      if (message) return;
+      createUserWithEmailAndPassword(
+        auth,
+        email.current.value,
+        password.current.value
+      )
+        .then((userCredential) => {
+          const user = userCredential.user;
+          console.log(user);
+        })
+        .catch((error) => {
+          const errorCode = error.code;
+          const errorMessage = error.message;
+          setErrorMessage(errorCode + "-" + errorMessage);
+        });
+    } else {
+      signInWithEmailAndPassword(
+        auth,
+        email.current.value,
+        password.current.value
+      )
+        .then((userCredential) => {
+          const user = userCredential.user;
+          console.log(user);
+        })
+        .catch((error) => {
+          const errorCode = error.code;
+          const errorMessage = error.message;
+          setErrorMessage(errorCode + "-" + errorMessage);
+        });
+    }
+  };
   const toggleSignIn = () => {
     setIsSignIn(!isSignIn);
   };
@@ -30,25 +76,31 @@ const Login = () => {
           </h1>
           {!isSignIn && (
             <input
+              ref={name}
               type="text"
               placeholder="Full Name"
               className="rounded-md w-full bg-gray-700 mb-4 p-4"
             />
           )}
           <input
+            ref={email}
             type="text"
             placeholder="Email or phone number"
             className="rounded-md w-full bg-gray-700 mb-4 p-4"
           />
           <input
+            ref={password}
             type="password"
             placeholder="Password"
             className="rounded-md w-full bg-gray-700 mb-4 p-4"
           />
-          <button className="p-4 mt-2 bg-red-600 w-full rounded-md font-medium">
+          <button
+            onClick={handleSignIn}
+            className="p-4 mt-2 bg-red-600 w-full rounded-md font-medium"
+          >
             {isSignIn ? "Sign In" : "Sign Up"}
           </button>
-
+          <p className="text-red-500 text-sm mt-2">{errorMessage}</p>
           <div className="flex justify-between mt-4 text-gray-400 text-sm">
             <div className="flex items-center">
               <input type="checkbox" id="remember" className="mr-1" />
