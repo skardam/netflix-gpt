@@ -5,6 +5,7 @@ const appStore = configureStore({
   reducer: {
     user: userReducer,
   },
+  devTools: true,
 });
 
 export default appStore;

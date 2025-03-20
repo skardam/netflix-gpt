@@ -1,81 +1,71 @@
 import React, { useRef, useState } from "react";
 import Header from "./Header";
 import { validateData } from "../utils/Validate";
-import { auth } from "../utils/firebase";
-import {
-  createUserWithEmailAndPassword,
-  signInWithEmailAndPassword,
-  updateProfile,
-} from "firebase/auth";
 import { useNavigate } from "react-router-dom";
 import { useDispatch } from "react-redux";
-import { addUser } from "../utils/userSlice";
+import authService from "../utils/authService";
 
 const Login = () => {
   const [isSignIn, setIsSignIn] = useState(true);
   const [errorMessage, setErrorMessage] = useState(null);
-  const navigate = useNavigate();
+  const [isLoading, setIsLoading] = useState(false);
   const dispatch = useDispatch();
+  const navigate = useNavigate();
 
   const name = useRef(null);
   const email = useRef(null);
   const password = useRef(null);
 
-  const handleSignIn = () => {
+  const handleSubmit = async (e) => {
+    e.preventDefault(); // Prevent form submission
+
     const message = validateData(email.current.value, password.current.value);
     setErrorMessage(message);
     if (message) return;
-    if (!isSignIn) {
-      createUserWithEmailAndPassword(
-        auth,
-        email.current.value,
-        password.current.value
-      )
-        .then((userCredential) => {
-          const user = userCredential.user;
-          updateProfile(user, {
-            displayName: name.current.value,
-            photoURL:
-              "https://lh3.googleusercontent.com/ogw/AF2bZyjKAX6w1OREN-0zcVCLj3Res6nMwl4AfRMNn-_OeqmoZ_bq=s64-c-mo",
-          })
-            .then(() => {
-              const { uid, email, displayName, photoURL } = auth.currentUser;
-              dispatch(
-                addUser({ uid: uid, email: email, displayName: displayName })
-              );
-              navigate("/browse");
-            })
-            .catch((error) => {
-              setErrorMessage(error.message);
-            });
-          console.log(user);
-        })
-        .catch((error) => {
-          const errorCode = error.code;
-          const errorMessage = error.message;
-          setErrorMessage(errorCode + "-" + errorMessage);
-        });
-    } else {
-      signInWithEmailAndPassword(
-        auth,
-        email.current.value,
-        password.current.value
-      )
-        .then((userCredential) => {
-          const user = userCredential.user;
-          console.log(user);
+
+    setIsLoading(true);
+
+    try {
+      if (!isSignIn) {
+        // Sign Up flow
+        const result = await authService.signUp(
+          name.current.value,
+          email.current.value,
+          password.current.value,
+          dispatch
+        );
+
+        if (result.success) {
           navigate("/browse");
-        })
-        .catch((error) => {
-          const errorCode = error.code;
-          const errorMessage = error.message;
-          setErrorMessage(errorCode + "-" + errorMessage);
-        });
+        } else {
+          setErrorMessage(result.error.code + ": " + result.error.message);
+        }
+      } else {
+        // Sign In flow
+        const result = await authService.signIn(
+          email.current.value,
+          password.current.value,
+          dispatch
+        );
+
+        if (result.success) {
+          navigate("/browse");
+        } else {
+          setErrorMessage(result.error.code + ": " + result.error.message);
+        }
+      }
+    } catch (error) {
+      setErrorMessage("Authentication error: " + error.message);
+    } finally {
+      setIsLoading(false);
     }
   };
+
   const toggleSignIn = () => {
     setIsSignIn(!isSignIn);
+    setErrorMessage(null);
   };
+
   return (
     <div className="relative h-screen">
       <Header />
@@ -94,7 +84,10 @@ const Login = () => {
 
       {/* Login Form - Centered */}
       <div className="absolute inset-0 flex items-center justify-center">
-        <form className="w-full max-w-sm p-12 mx-auto rounded-lg bg-black/75 text-white z-10">
+        <form
+          onSubmit={handleSubmit}
+          className="w-full max-w-sm p-12 mx-auto rounded-lg bg-black/75 text-white z-10"
+        >
           <h1 className="font-bold text-3xl text-white mb-6">
             {isSignIn ? "Sign In" : "Sign Up"}
           </h1>
@@ -108,7 +101,7 @@ const Login = () => {
           )}
           <input
             ref={email}
-            type="text"
+            type="email"
             placeholder="Email or phone number"
             className="rounded-md w-full bg-gray-700 mb-4 p-4"
           />
@@ -119,10 +112,11 @@ const Login = () => {
             className="rounded-md w-full bg-gray-700 mb-4 p-4"
           />
           <button
-            onClick={handleSignIn}
+            type="submit"
+            disabled={isLoading}
             className="p-4 mt-2 bg-red-600 w-full rounded-md font-medium"
           >
-            {isSignIn ? "Sign In" : "Sign Up"}
+            {isLoading ? "Loading..." : isSignIn ? "Sign In" : "Sign Up"}
           </button>
           <p className="text-red-500 text-sm mt-2">{errorMessage}</p>
           <div className="flex justify-between mt-4 text-gray-400 text-sm">
@@ -141,11 +135,13 @@ const Login = () => {
               <a
                 href="#"
                 className="text-white hover:underline"
-                onClick={toggleSignIn}
+                onClick={(e) => {
+                  e.preventDefault();
+                  toggleSignIn();
+                }}
               >
                 {isSignIn ? "Sign up now." : "Sign in."}
               </a>
-              .
             </p>
           </div>
         </form>
