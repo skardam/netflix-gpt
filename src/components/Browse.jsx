@@ -1,17 +1,14 @@
-import React, { useEffect } from "react";
+import React from "react";
 import Header from "./Header";
 import useNowPlayingMoviews from "../hooks/useNowPlayingMovies";
+import usePopularMovies from "../hooks/usePopularMovies";
 import MainContainer from "./MainContainer";
 import SecondaryContainer from "./SecondaryContainer";
-import { useSelector } from "react-redux";
 
 const Browse = () => {
   useNowPlayingMoviews();
-  const movies = useSelector((state) => state.movies?.nowPlayingMovies);
-  if (!movies) return null;
+  usePopularMovies();
 
-  const mainMovie = movies[0];
-  console.log("mainMovie", mainMovie);
   return (
     <div>
       <Header />
